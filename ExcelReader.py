@@ -9,5 +9,8 @@ class ExcelReader():
 er =  ExcelReader()
 
 
-path = "C:/Users/Youri/Desktop/Data/XLS240610232047.xlsx"
-er.read_file_to_dataframe(path)
+with open('filepaths.txt', 'r') as file:
+    path = file.read().replace('\n', '')
+    
+data = er.read_file_to_dataframe(path)
+print(data)
