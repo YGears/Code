@@ -6,14 +6,13 @@ def install_requirements():
     print("installed packages from requirements.txt")
 
 def create_txt_installed_packages():
-    subprocess.check_call([sys.executable, "-m", "pip", "lists", ">", ".installed_packages"])
-    print("installed packages from requirements.txt")
-
-
+    subprocess.check_call([sys.executable, "-m", "pip", "list", ">", ".installed_packages"])
+    print("created file .installed_packages")
 
 
 def call_functions():
     install_requirements()
+    create_txt_installed_packages()
 call_functions()
 
 
