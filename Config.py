@@ -13,5 +13,3 @@ def install_requirements():
 def call_functions():
     install_requirements()
 call_functions()
-
-
