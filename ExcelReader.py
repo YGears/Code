@@ -1,10 +1,12 @@
 import pandas as pd
+import re
 
 class ExcelReader():
 
     def __init__(self):
         self.dataframe = pd.DataFrame([])
-        
+        self.unique_vendors:list = []    
+    
     def get_dataframe(self):
         return self.dataframe
 
@@ -13,22 +15,52 @@ class ExcelReader():
         self.dataframe = dataframe
     
     def get_vendor(self):
-        data = self.dataframe['Omschrijving']
-        data = data.head(3)
+
+        # get every row starting with a card payment
+        data = self.dataframe[self.dataframe['Omschrijving'].str.startswith('BEA, Betaalpas')]['Omschrijving']
         vendor_column = data.apply(self.split_str_column)
-        # print(vendor_column)
-        print(data.iloc[0])
-        x:str = data.iloc[0]
-        # print(x.split(', '))
-        print(x.split("    "))
+        self.dataframe['Vendor'] = data.apply(self.split_str_column)
+
+
+    def get_duplicate_index(self):
+        df = self.dataframe
+        return df[df.index.duplicated()] 
+    
+    def add_id_index(self) -> None:
+        self.dataframe['id'] =  self.dataframe.reset_index().index
+        self.dataframe.set_index('id', inplace=True)
+
+    def print_n_rows(self, data:pd.DataFrame, amount:int = 1):
+
+        l = data.head(amount).squeeze().tolist()
+
+        [print(f"{item} \n") for item in l]
         
-        # print(vendor_column)
+        # print(data.head(amount))
+    
+
         
 
-    def split_str_column(self, row):
-        print(type(row))
-        return row.split()
+    def split_str_column(self, row:str):
+        # split row on whitespace if more than 2 characters
+        row_split_on_whitespace = re.split(r'\s{3,}', row)
 
+        # get pair with vendor and split off ,
+        vendor = row_split_on_whitespace[1].split(',')[0]
+
+        # some contain a prefix with *, which will be removed
+        if '*' in vendor:
+            vendor = vendor.split('*')[1]
+
+        # check if vendor in self.unique vendors, add if not    
+        if vendor not in self.unique_vendors:
+            self.unique_vendors.append(vendor)
+        return vendor
+    
+    def get_omschrijving_when_vendor_nan(self):
+        df = self.dataframe
+        res = df[df['Vendor'].isnull()]['Omschrijving']
+        self.print_n_rows(res, 20)
     
 er =  ExcelReader()
 
@@ -37,11 +69,10 @@ with open('filepaths.txt', 'r') as file:
     path = file.read().replace('\n', '')
     
 er.read_file_to_dataframe(path)
+er.add_id_index()
 er.get_vendor()
 
 
-# print(er.get_dataframe())
+# er.print_n_rows(20)
 
-# print(er.get_dataframe()['Omschrijving'])
-
-
+print(er.get_omschrijving_when_vendor_nan())
