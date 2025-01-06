@@ -6,16 +6,18 @@ class ExcelReader():
     def __init__(self):
         self.dataframe = pd.DataFrame([])
         self.unique_vendors:list = []    
-    
+
+
     def get_dataframe(self):
         return self.dataframe
+
 
     def read_file_to_dataframe(self, path:str) -> None:
         dataframe = pd.read_excel(path, index_col='Rentedatum')
         self.dataframe = dataframe
     
-    def get_vendor(self):
 
+    def get_vendor(self):
         # get every row starting with a card payment
         data = self.dataframe[self.dataframe['Omschrijving'].str.startswith('BEA, Betaalpas')]['Omschrijving']
         vendor_column = data.apply(self.split_str_column)
@@ -25,25 +27,25 @@ class ExcelReader():
     def get_duplicate_index(self):
         df = self.dataframe
         return df[df.index.duplicated()] 
-    
+
+
     def add_id_index(self) -> None:
         self.dataframe['id'] =  self.dataframe.reset_index().index
         self.dataframe.set_index('id', inplace=True)
 
+
     def print_n_rows(self, data:pd.DataFrame, amount:int = 1):
-
         l = data.head(amount).squeeze().tolist()
-
         [print(f"{item} \n") for item in l]
-        
-        # print(data.head(amount))
     
 
-        
+    def split_str_on_whitespace(self, row:str, spaces:int = 2):
+        return re.split(r'\s{'+str(spaces)+',}', row)
+    
 
     def split_str_column(self, row:str):
         # split row on whitespace if more than 2 characters
-        row_split_on_whitespace = re.split(r'\s{3,}', row)
+        row_split_on_whitespace = self.split_str_on_whitespace(row=row, spaces=3)
 
         # get pair with vendor and split off ,
         vendor = row_split_on_whitespace[1].split(',')[0]
@@ -60,7 +62,13 @@ class ExcelReader():
     def get_omschrijving_when_vendor_nan(self):
         df = self.dataframe
         res = df[df['Vendor'].isnull()]['Omschrijving']
-        self.print_n_rows(res, 20)
+        self.print_n_rows(res, 100)
+        print(f'Rowcount: {res.count()}')
+
+    def get_distinct_omschrijving_prefix(self):
+        
+        
+        pass
     
 er =  ExcelReader()
 
