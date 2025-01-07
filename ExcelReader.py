@@ -53,7 +53,7 @@ class ExcelReader():
     
     def get_temp_splitted_omschrijving_column(self):    
         df = self.dataframe
-        df['temp_splitted_omschrijving'] = df['Omschrijving'].apply(self.split_str_on_whitespace)
+        df['temp_splitted_omschrijving'] = df['Omschrijving'].apply(self.split_str_on_whitespace, args=(3,))
 
     def get_paymenttype_column(self):
         df = self.dataframe
@@ -65,25 +65,23 @@ class ExcelReader():
         # print(df.groupby(['PaymentType'], as_index=False)['PaymentType'].value_counts().sort_values('count').to_string())
 
     def get_vendor_on_paymentmethod(self, row):
-        # print(type(row))
-        # print(row)
         payment_method:str = row['PaymentType']
 
         match payment_method:
             
             case "BEA, Betaalpas":
-                # self.dataframe['Vendor'] = self.dataframe['temp_splitted_omschrijving'].apply(self.get_vendor_with_prefix_BEA_betaalpas)
-                print('Found BEA, Betaalpas')
-                print(row['temp_splitted_omschrijving'][1])
                 vendor_with_cardnumber = row['temp_splitted_omschrijving'][1]
                 vendor = vendor_with_cardnumber.split(',')[0]
-                print(vendor)
-                return vendor
+                if '*' in vendor:
+                    vendor = vendor.split('*')[1]
+
+                return self.clean_string(vendor)
 
             case "SEPA Overboeking":
-                print('Found SEPA Overboeking')
-
-                return
+                vendor_with_naam_prefix = row['temp_splitted_omschrijving'][3]
+                vendor = vendor_with_naam_prefix.split(': ')[1]
+            
+                return self.clean_string(vendor)
             
             case "SEPA iDEAL":
                 print('Found SEPA iDEAL')
@@ -102,7 +100,8 @@ class ExcelReader():
             case _:
                 print(f'Found else: {payment_method}')
 
-
+    def clean_string(self, string_value) ->str:
+       return str.upper(re.sub(r"[^a-zA-Z0-9]+", ' ', string_value))
 
     def get_vendor_with_prefix_BEA_betaalpas(self):
         pass
@@ -117,28 +116,7 @@ class ExcelReader():
         pass
 
 
-    def get_vendor(self):
-        # get every row starting with a card payment
-        data = self.dataframe[self.dataframe['Omschrijving'].str.startswith('BEA, Betaalpas')]['Omschrijving']
-        vendor_column = data.apply(self.split_str_column)
-        self.dataframe['Vendor'] = data.apply(self.split_str_column)
 
-
-    def split_str_column(self, row:str):
-        # split row on whitespace if more than 2 characters
-        row_split_on_whitespace = self.split_str_on_whitespace(row=row, spaces=3)
-
-        # get pair with vendor and split off ,
-        vendor = row_split_on_whitespace[1].split(',')[0]
-
-        # some contain a prefix with *, which will be removed
-        if '*' in vendor:
-            vendor = vendor.split('*')[1]
-
-        # check if vendor in self.unique vendors, add if not    
-        if vendor not in self.unique_vendors:
-            self.unique_vendors.append(vendor)
-        return vendor
     
     def get_unparsed_vendors(self):
         df = self.dataframe
@@ -148,11 +126,12 @@ class ExcelReader():
 
 
     def clean_omschrijving(self):
-        self.dataframe['Omschrijving'] = self.dataframe['Omschrijving'].apply(lambda x : ",".join(re.split(r'\s{'+str(3)+',}', x)))
+        self.dataframe['Omschrijving'] = self.dataframe['Omschrijving'].apply(lambda x : ", ".join(re.split(r'\s{'+str(3)+',}', x)))
 
     def run(self):
         self.get_temp_splitted_omschrijving_column()
         self.get_paymenttype_column()
+        
         self.dataframe['Vendor'] = self.dataframe.apply(self.get_vendor_on_paymentmethod, axis='columns')
 
         
@@ -170,15 +149,19 @@ er =  ExcelReader(path)
 # df = er.get_dataframe()
 # er.clean_omschrijving()
 
-# df = df[df['Omschrijving'].str.startswith('BEA, Betaalpas')]
-# # df = df[df['Omschrijving'].str.startswith('SEPA Overboeking')]
-# # df = df[df['Omschrijving'].str.startswith('SEPA Incasso algemeen doorlopend Incassant: NL03ZZZ301243580000')]
+# # df = df[df['Omschrijving'].str.startswith('BEA, Betaalpas')]
+# df = df[df['Omschrijving'].str.startswith('SEPA Overboeking')]
+# # df = df[df['Omschrijving'].str.startswith('SEPA Incasso algemeen doorlopend Incassant')]
 # print(df.head(10).to_string(justify='left').replace('\n', '\n\n'))
 
-# print(er.get_omschrijving_when_vendor_nan())
+# # print(er.get_omschrijving_when_vendor_nan())
 
 
 er.run()
 
-print(er.dataframe.loc[er.dataframe['Vendor'].notnull()], ['Vendor'])
-print(er.dataframe.loc[er.dataframe['Vendor'].notnull()], ['Vendor'].count)
+# print(er.dataframe.loc[er.dataframe['Vendor'].notnull(),['Vendor', 'temp_splitted_omschrijving']].to_string())
+# # print(er.dataframe.loc[er.dataframe['Vendor'].notnull()], ['Vendor'].count)
+[print(f'{k:25}:{v}') for k, v in er.dataframe.groupby('Vendor')['Vendor'].count().sort_values().to_dict().items()]
+# # print(er.dataframe['Vendor'].unique())
+# print(er.get_dataframe()['Vendor'].nunique())
+
