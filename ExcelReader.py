@@ -33,16 +33,7 @@ class ExcelReader():
 
     
     def get_dataframe(self):
-        return self.dataframe
-    
-
-    def print_n_rows_of_column(self, data:pd.DataFrame=None, column_name:str='Omschrijving', rowcount:int = 1):
-
-        if data == None:
-            data = self.get_dataframe()[column_name]
-
-        l = data.head(rowcount).squeeze().tolist()
-        [print(f"{item} \n") for item in l]
+        return self.dataframe 
             
 
     def split_str_on_whitespace(self, row:str, spaces:int = 2):
@@ -51,9 +42,20 @@ class ExcelReader():
     def get_index_of_list(self, row:str, index:int=0):
         return row[index]
     
-    def get_temp_splitted_omschrijving_column(self):    
+    def get_temp_splitted_omschrijving_column(self):
+        """
+        Creates temporary column temp_splitted_omschrijving
+
+        Omschrijving by default is a list of ambiguous items with a schema that differs per payment method
+        The items are splitted on whitespace, with distance a variable to keep matching columns
+        This function splits the items on this whitespace and returns it a a new column with a list
+
+        Although a bad practice for production, it is a great asset when peforming transformations with a dynamic list.
+        We can extract information on a use-case basis and have common denominators as new columns
+        Ex. payment_method and vendor, key columns when presenting data to the GUI.
+        """    
         df = self.dataframe
-        df['temp_splitted_omschrijving'] = df['Omschrijving'].apply(self.split_str_on_whitespace, args=(3,))
+        df['temp_splitted_omschrijving'] = df['Omschrijving'].apply(self.split_str_on_whitespace, args=(2,))
 
     def get_paymenttype_column(self):
         df = self.dataframe
@@ -101,7 +103,7 @@ class ExcelReader():
                 print(f'Found else: {payment_method}')
 
     def clean_string(self, string_value) ->str:
-       return str.upper(re.sub(r"[^a-zA-Z0-9]+", ' ', string_value))
+       return str.upper(re.sub(r"[^a-zA-Z0-9]+", ' ', string_value)).strip()
 
     def get_vendor_with_prefix_BEA_betaalpas(self):
         pass
@@ -121,18 +123,26 @@ class ExcelReader():
     def get_unparsed_vendors(self):
         df = self.dataframe
         res = df[df['Vendor'].isnull()]['Omschrijving']
-        self.print_n_rows_of_column(res, 100)
+        print(res.head(100))
         print(f'Rowcount: {res.count()}')
 
 
     def clean_omschrijving(self):
         self.dataframe['Omschrijving'] = self.dataframe['Omschrijving'].apply(lambda x : ", ".join(re.split(r'\s{'+str(3)+',}', x)))
+    
+    def drop_temp_columns(self):
+        self.dataframe.drop(columns=['temp_splitted_omschrijving'], inplace=True)
 
     def run(self):
         self.get_temp_splitted_omschrijving_column()
         self.get_paymenttype_column()
         
         self.dataframe['Vendor'] = self.dataframe.apply(self.get_vendor_on_paymentmethod, axis='columns')
+
+        #drop temp columns
+        self.drop_temp_columns()
+
+    
 
         
 
@@ -154,14 +164,16 @@ er =  ExcelReader(path)
 # # df = df[df['Omschrijving'].str.startswith('SEPA Incasso algemeen doorlopend Incassant')]
 # print(df.head(10).to_string(justify='left').replace('\n', '\n\n'))
 
-# # print(er.get_omschrijving_when_vendor_nan())
 
 
 er.run()
 
 # print(er.dataframe.loc[er.dataframe['Vendor'].notnull(),['Vendor', 'temp_splitted_omschrijving']].to_string())
+print(er.get_dataframe()[er.get_dataframe()['Vendor'].isnull()]['PaymentType'].unique())
 # # print(er.dataframe.loc[er.dataframe['Vendor'].notnull()], ['Vendor'].count)
 [print(f'{k:25}:{v}') for k, v in er.dataframe.groupby('Vendor')['Vendor'].count().sort_values().to_dict().items()]
 # # print(er.dataframe['Vendor'].unique())
 # print(er.get_dataframe()['Vendor'].nunique())
+print(er.get_dataframe())
+print(er.get_unparsed_vendors())
 
