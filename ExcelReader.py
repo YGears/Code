@@ -78,6 +78,12 @@ class ExcelReader():
                     vendor = vendor.split('*')[1]
 
                 return self.clean_string(vendor)
+            
+            case "BEA, Apple Pay":
+                vendor_with_cardnumber = row['temp_splitted_omschrijving'][1]
+                vendor = vendor_with_cardnumber.split(',')[0]
+                if '*' in vendor:
+                    vendor = vendor.split('*')[1]
 
             case "SEPA Overboeking":
                 vendor_with_naam_prefix = row['temp_splitted_omschrijving'][3]
@@ -86,39 +92,40 @@ class ExcelReader():
                 return self.clean_string(vendor)
             
             case "SEPA iDEAL":
-                print('Found SEPA iDEAL')
-
-                return
+                vendor_with_naam_prefix = row['temp_splitted_omschrijving'][3]
+                vendor = vendor_with_naam_prefix.split(': ')[1]
+            
+                return self.clean_string(vendor)
             
             case "RENTE EN/OF KOSTEN":
-                print('Found RENTE EN/OF KOSTEN')
-                return
+                vendor = row['temp_splitted_omschrijving'][1]          
+                
+                return self.clean_string(vendor)
             
             #wildcard on all SEPA Incasso algemeen doorlopend
             case x if x.startswith('SEPA Incasso algemeen doorlopend'):
-                print('Found SEPA Incasso algemeen doorlopend')
-                return
+                vendor_with_naam_prefix = row['temp_splitted_omschrijving'][1]
+                vendor = vendor_with_naam_prefix.split(': ')[1]                
+                
+                return self.clean_string(vendor)
             
+            case x if x.startswith('/TRTP/'):
+                splitted_cell:list = row['temp_splitted_omschrijving'][0].split('/')
+                index_of_name = splitted_cell.index("NAME")+1
+                return self.clean_string(splitted_cell[index_of_name])
+            
+            case "ABN AMRO Bank N.V.":
+                return "Geldautomaat"
+            
+            case "GEA, Betaalpas":
+                return "Geldautomaat Amerika"
+
+
             case _:
                 print(f'Found else: {payment_method}')
 
     def clean_string(self, string_value) ->str:
        return str.upper(re.sub(r"[^a-zA-Z0-9]+", ' ', string_value)).strip()
-
-    def get_vendor_with_prefix_BEA_betaalpas(self):
-        pass
-    
-    def get_vendor_with_prefix_SEPA_Overboeking(self):
-        pass
-
-    def get_vendor_with_prefix_SEPA_iDEAL(self):
-        pass
-
-    def get_vendor_with_prefix_SEPA_Icasso_algemeen_doorlopend(self):
-        pass
-
-
-
     
     def get_unparsed_vendors(self):
         df = self.dataframe
@@ -128,7 +135,7 @@ class ExcelReader():
 
 
     def clean_omschrijving(self):
-        self.dataframe['Omschrijving'] = self.dataframe['Omschrijving'].apply(lambda x : ", ".join(re.split(r'\s{'+str(3)+',}', x)))
+        self.dataframe['Omschrijving'] = self.dataframe['Omschrijving'].apply(lambda x : ", ".join(re.split(r'\s{'+str(2)+',}', x)))
     
     def drop_temp_columns(self):
         self.dataframe.drop(columns=['temp_splitted_omschrijving'], inplace=True)
@@ -152,28 +159,21 @@ with open('filepaths.txt', 'r') as file:
     path = file.read().replace('\n', '')
 
 er =  ExcelReader(path)
+er.run()
 
-
+# print(er.get_dataframe()[er.get_dataframe()['Vendor'].isnull()]['PaymentType'].unique())
+# # # print(er.dataframe.loc[er.dataframe['Vendor'].notnull()], ['Vendor'].count)
+# [print(f'{k:25}:{v}') for k, v in er.dataframe.groupby('Vendor')['Vendor'].count().sort_values().to_dict().items()]
+# # # print(er.dataframe['Vendor'].unique())
+# # print(er.get_dataframe()['Vendor'].nunique())
+# print(er.get_dataframe())
+# print(er.get_unparsed_vendors())
 
 
 # df = er.get_dataframe()
 # er.clean_omschrijving()
-
-# # df = df[df['Omschrijving'].str.startswith('BEA, Betaalpas')]
-# df = df[df['Omschrijving'].str.startswith('SEPA Overboeking')]
-# # df = df[df['Omschrijving'].str.startswith('SEPA Incasso algemeen doorlopend Incassant')]
+# df = df[df['Omschrijving'].str.startswith('')]
 # print(df.head(10).to_string(justify='left').replace('\n', '\n\n'))
 
 
-
-er.run()
-
-# print(er.dataframe.loc[er.dataframe['Vendor'].notnull(),['Vendor', 'temp_splitted_omschrijving']].to_string())
-print(er.get_dataframe()[er.get_dataframe()['Vendor'].isnull()]['PaymentType'].unique())
-# # print(er.dataframe.loc[er.dataframe['Vendor'].notnull()], ['Vendor'].count)
-[print(f'{k:25}:{v}') for k, v in er.dataframe.groupby('Vendor')['Vendor'].count().sort_values().to_dict().items()]
-# # print(er.dataframe['Vendor'].unique())
-# print(er.get_dataframe()['Vendor'].nunique())
-print(er.get_dataframe())
-print(er.get_unparsed_vendors())
-
+print("END")
