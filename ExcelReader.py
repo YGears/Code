@@ -163,17 +163,18 @@ er.run()
 
 # print(er.get_dataframe()[er.get_dataframe()['Vendor'].isnull()]['PaymentType'].unique())
 # # # print(er.dataframe.loc[er.dataframe['Vendor'].notnull()], ['Vendor'].count)
-# [print(f'{k:25}:{v}') for k, v in er.dataframe.groupby('Vendor')['Vendor'].count().sort_values().to_dict().items()]
+[print(f'{k:25}:{v}') for k, v in er.dataframe.groupby('Vendor')['Vendor'].count().sort_values().to_dict().items()]
 # # # print(er.dataframe['Vendor'].unique())
 # # print(er.get_dataframe()['Vendor'].nunique())
 # print(er.get_dataframe())
 # print(er.get_unparsed_vendors())
 
-
+##Testing code to identify rows that start with a certain payment method
 # df = er.get_dataframe()
 # er.clean_omschrijving()
 # df = df[df['Omschrijving'].str.startswith('')]
 # print(df.head(10).to_string(justify='left').replace('\n', '\n\n'))
 
 
+print(er.get_dataframe().head(100))
 print("END")
